@@ -98,6 +98,7 @@ func TestMakeCoordinator(t *testing.T) {
 	nReduce := 3
 
 	c := MakeCoordinator(files, nReduce)
+	defer c.Stop()
 
 	if c == nil {
 		t.Fatal("MakeCoordinator returned nil")
@@ -115,7 +116,7 @@ func TestCoordinatorAssignsMapTasks(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 3)
 
 	c := MakeCoordinator(files, 2)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Request tasks - should get MapTask
 	args := GetTaskArgs{}
@@ -136,7 +137,7 @@ func TestCoordinatorAssignsAllMapTasks(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 3)
 
 	c := MakeCoordinator(files, 2)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Request all map tasks
 	assignedTasks := make(map[int]bool)
@@ -163,7 +164,7 @@ func TestCoordinatorWaitsWhenNoTask(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 2)
 
 	c := MakeCoordinator(files, 2)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Assign all map tasks
 	for i := 0; i < len(files); i++ {
@@ -187,7 +188,7 @@ func TestCoordinatorTransitionsToReducePhase(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 2)
 
 	c := MakeCoordinator(files, 2)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Complete all map tasks
 	for i := 0; i < len(files); i++ {
@@ -216,7 +217,7 @@ func TestCoordinatorDone(t *testing.T) {
 	nReduce := 2
 
 	c := MakeCoordinator(files, nReduce)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Complete all map tasks
 	for i := 0; i < len(files); i++ {
@@ -255,7 +256,7 @@ func TestCoordinatorTimeout(t *testing.T) {
 	files := createTestFiles(t, tmpDir, 1)
 
 	c := MakeCoordinator(files, 1)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Get a task but don't complete it
 	args := GetTaskArgs{}
@@ -295,7 +296,7 @@ func TestWorkerDoesMapTask(t *testing.T) {
 	nReduce := 2
 
 	c := MakeCoordinator(files, nReduce)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Simulate worker
 	args := GetTaskArgs{}
@@ -364,7 +365,7 @@ func TestWordCount(t *testing.T) {
 	nReduce := 2
 
 	c := MakeCoordinator(files, nReduce)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	// Change to tmpDir for intermediate files
 	origDir, _ := os.Getwd()
@@ -420,7 +421,7 @@ func TestParallelWorkers(t *testing.T) {
 	nReduce := 3
 
 	c := MakeCoordinator(files, nReduce)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	origDir, _ := os.Getwd()
 	os.Chdir(tmpDir)
@@ -474,7 +475,7 @@ func TestWorkerCrash(t *testing.T) {
 	nReduce := 1
 
 	c := MakeCoordinator(files, nReduce)
-	defer cleanupCoordinator()
+	defer c.Stop()
 
 	origDir, _ := os.Getwd()
 	os.Chdir(tmpDir)

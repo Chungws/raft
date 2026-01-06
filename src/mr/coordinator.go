@@ -1,6 +1,9 @@
 package mr
 
 import (
+	"net"
+	"net/rpc"
+	"os"
 	"sync"
 	"time"
 )
@@ -36,6 +39,8 @@ type Coordinator struct {
 	reduceTasks []Task
 	phase       Phase
 	mu          sync.Mutex
+	rpcServer   *rpc.Server
+	listener    net.Listener
 }
 
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
@@ -46,6 +51,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		reduceTasks: make([]Task, nReduce),
 		phase:       MapPhase,
 		mu:          sync.Mutex{},
+		listener:    nil,
 	}
 	for i := range c.mapTasks {
 		c.mapTasks[i].ID = i
@@ -56,6 +62,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		c.reduceTasks[i].ID = i
 		c.reduceTasks[i].Type = ReduceTask
 	}
+	c.server()
 	go c.checkTimeouts()
 	return c
 }
@@ -127,6 +134,28 @@ func (c *Coordinator) Done() bool {
 	return c.phase == Done
 }
 
+func (c *Coordinator) Stop() {
+	if c.listener != nil {
+		c.listener.Close()
+	}
+}
+
+func (c *Coordinator) server() {
+	c.rpcServer = rpc.NewServer()
+	c.rpcServer.Register(c)
+	os.Remove("/tmp/mr-coordinator")
+	c.listener, _ = net.Listen("unix", "/tmp/mr-coordinator")
+	go func() {
+		for {
+			conn, err := c.listener.Accept()
+			if err != nil {
+				return
+			}
+			go c.rpcServer.ServeConn(conn)
+		}
+	}()
+}
+
 func (c *Coordinator) checkTimeouts() {
 	for {
 		time.Sleep(time.Second)
@@ -153,6 +182,7 @@ func (c *Coordinator) checkTimeouts() {
 		c.mu.Unlock()
 	}
 }
+
 func allCompleted(tasks []Task) bool {
 	for _, task := range tasks {
 		if task.State != Completed {
